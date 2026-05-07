@@ -17,6 +17,6 @@ export default defineConfig({
     command: "npm run build && node dist/index.js",
     port: 3000,
     timeout: 30000,
-    reuseExistingServer: false,
+    reuseExistingServer: true,
   },
 });
