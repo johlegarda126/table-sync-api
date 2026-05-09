@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import tablesRouter from './modules/tables/routes/tables.routes.js';
+import restaurantsRouter from './modules/restaurants/routes/restaurants.routes.js';
 import { connectDatabase } from './shared/database.js';
 import { config } from './config.js';
 
@@ -9,6 +10,7 @@ const port = config.port;
 app.use(express.json());
 
 // Mount routes
+app.use('/restaurants', restaurantsRouter);
 app.use('/tables', tablesRouter);
 
 // Health check

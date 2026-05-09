@@ -1,5 +1,7 @@
+import { Types } from 'mongoose';
 import { Table, TableStatus, CreateTableDTO } from '../types/index.js';
 import { TableEntity } from '../model/TableEntity.js';
+import { RestaurantEntity } from '../../restaurants/model/RestaurantEntity.js';
 
 export class TableService {
   private model = TableEntity;
@@ -11,6 +13,15 @@ export class TableService {
     const existing = await this.model.findOne({ id }).lean().exec();
     if (existing) {
       throw { status: 409, message: 'Table already exists' };
+    }
+
+    const restaurantId = data.restaurantId;
+    const restaurantExists = Types.ObjectId.isValid(restaurantId)
+      ? await RestaurantEntity.exists({ _id: restaurantId })
+      : false;
+
+    if (!restaurantExists) {
+      throw { status: 400, message: 'Restaurant not found' };
     }
 
     const created = await this.model.create({
