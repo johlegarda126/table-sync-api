@@ -1,130 +1,152 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from '@playwright/test';
 
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = 'http://localhost:3000';
 
-test.describe("Table Management API - Acceptance Criteria", () => {
+async function createRestaurant(request: APIRequestContext, suffix = 'restaurant') {
+  const response = await request.post(`${BASE_URL}/restaurants`, {
+    data: {
+      name: `Restaurante ${suffix}`,
+      address: `Dirección ${suffix}`,
+      openingHours: '09:00',
+      closingHours: '22:00',
+    },
+  });
+
+  expect(response.status()).toBe(201);
+  return response.json();
+}
+
+test.describe('Table Management API - Acceptance Criteria', () => {
   test.beforeEach(async ({ request }) => {
     // Reset state before each test by making requests that won't conflict
   });
 
-  test("AC1: When requesting table info, API returns id, restaurantId, number, capacity, status, tableType", async ({
+  test('AC1: When requesting table info, API returns id, restaurantId, number, capacity, status, tableType', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '001');
+
     const createResponse = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-001",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
 
     expect(createResponse.status()).toBe(201);
     const table = await createResponse.json();
 
-    expect(table).toHaveProperty("id");
-    expect(table).toHaveProperty("restaurantId", "rest-001");
-    expect(table).toHaveProperty("number", 1);
-    expect(table).toHaveProperty("capacity", 4);
-    expect(table).toHaveProperty("status", "disponible");
-    expect(table).toHaveProperty("tableType", "interior");
+    expect(table).toHaveProperty('id');
+    expect(table).toHaveProperty('restaurantId', restaurant.id);
+    expect(table).toHaveProperty('number', 1);
+    expect(table).toHaveProperty('capacity', 4);
+    expect(table).toHaveProperty('status', 'disponible');
+    expect(table).toHaveProperty('tableType', 'interior');
   });
 
-  test("AC2: When creating a table, API rejects capacity < 1 or > 11", async ({
+  test('AC2: When creating a table, API rejects capacity < 1 or > 11', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '002');
+
     // Test capacity < 1
     const responseBelow = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-002",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 0,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(responseBelow.status()).toBe(400);
-    expect(await responseBelow.json()).toHaveProperty("error");
+    expect(await responseBelow.json()).toHaveProperty('error');
 
     // Test capacity > 11
     const responseAbove = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-002",
+        restaurantId: restaurant.id,
         number: 2,
         capacity: 12,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(responseAbove.status()).toBe(400);
-    expect(await responseAbove.json()).toHaveProperty("error");
+    expect(await responseAbove.json()).toHaveProperty('error');
 
     // Test valid capacity 1-11
     const validResponse = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-002",
+        restaurantId: restaurant.id,
         number: 3,
         capacity: 1,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(validResponse.status()).toBe(201);
 
     const validResponse11 = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-002",
+        restaurantId: restaurant.id,
         number: 4,
         capacity: 11,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(validResponse11.status()).toBe(201);
   });
 
-  test("AC3: When creating a table, API rejects invalid status values", async ({
+  test('AC3: When creating a table, API rejects invalid status values', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '003');
+
     // Tables are created with 'disponible' status by default
     const response = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-003",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(response.status()).toBe(201);
     const table = await response.json();
-    expect(table.status).toBe("disponible");
+    expect(table.status).toBe('disponible');
 
     // Try to update with invalid status
     const invalidStatusResponse = await request.put(
       `${BASE_URL}/tables/${table.id}/status`,
       {
-        data: { status: "invalid_status" },
+        data: { status: 'invalid_status' },
       }
     );
     expect(invalidStatusResponse.status()).toBe(400);
   });
 
-  test("AC4: When creating a table, API rejects invalid tableType values", async ({
+  test('AC4: When creating a table, API rejects invalid tableType values', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '004');
+
     const invalidResponse = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-004",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "invalid_type",
+        tableType: 'invalid_type',
       },
     });
     expect(invalidResponse.status()).toBe(400);
-    expect(await invalidResponse.json()).toHaveProperty("error");
+    expect(await invalidResponse.json()).toHaveProperty('error');
 
     // Test all valid types
-    const validTypes = ["interior", "exterior", "privada", "familiar"];
+    const validTypes = ['interior', 'exterior', 'privada', 'familiar'];
     for (let i = 0; i < validTypes.length; i++) {
       const validResponse = await request.post(`${BASE_URL}/tables`, {
         data: {
-          restaurantId: "rest-004",
+          restaurantId: restaurant.id,
           number: i + 1,
           capacity: 4,
           tableType: validTypes[i],
@@ -136,20 +158,22 @@ test.describe("Table Management API - Acceptance Criteria", () => {
     }
   });
 
-  test("AC5: When reserving a table, its status changes from disponible to reservada", async ({
+  test('AC5: When reserving a table, its status changes from disponible to reservada', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '005');
+
     // Create a table
     const createResponse = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-005",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     const table = await createResponse.json();
-    expect(table.status).toBe("disponible");
+    expect(table.status).toBe('disponible');
 
     // Reserve the table
     const reserveResponse = await request.post(
@@ -162,23 +186,25 @@ test.describe("Table Management API - Acceptance Criteria", () => {
 
     // Verify status changed
     const getResponse = await request.get(`${BASE_URL}/tables`, {
-      params: { restaurantId: "rest-005" },
+      params: { restaurantId: restaurant.id },
     });
     const tables = await getResponse.json();
     const updatedTable = tables.find((t) => t.id === table.id);
-    expect(updatedTable.status).toBe("reservada");
+    expect(updatedTable.status).toBe('reservada');
   });
 
-  test("AC6: When a reserved table is occupied, its status changes from reservada to ocupada", async ({
+  test('AC6: When a reserved table is occupied, its status changes from reservada to ocupada', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '006');
+
     // Create and reserve a table
     const createResponse = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-006",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     const table = await createResponse.json();
@@ -197,34 +223,35 @@ test.describe("Table Management API - Acceptance Criteria", () => {
 
     // Verify status changed to ocupada
     const getResponse = await request.get(`${BASE_URL}/tables`, {
-      params: { restaurantId: "rest-006" },
+      params: { restaurantId: restaurant.id },
     });
     const tables = await getResponse.json();
     const updatedTable = tables.find((t) => t.id === table.id);
-    expect(updatedTable.status).toBe("ocupada");
+    expect(updatedTable.status).toBe('ocupada');
   });
 
-  test("AC7: When querying availability, API returns only tables with status disponible", async ({
+  test('AC7: When querying availability, API returns only tables with status disponible', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '007');
+
     // Create multiple tables
-    const rest007 = "rest-007";
     const table1Response = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: rest007,
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     const table1 = await table1Response.json();
 
     const table2Response = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: rest007,
+        restaurantId: restaurant.id,
         number: 2,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     const table2 = await table2Response.json();
@@ -236,70 +263,72 @@ test.describe("Table Management API - Acceptance Criteria", () => {
 
     // Query available tables
     const availableResponse = await request.get(`${BASE_URL}/tables`, {
-      params: { restaurantId: rest007, status: "disponible" },
+      params: { restaurantId: restaurant.id, status: 'disponible' },
     });
     const availableTables = await availableResponse.json();
 
     // Should only have the unreserved table
     expect(availableTables).toHaveLength(1);
     expect(availableTables[0].id).toBe(table2.id);
-    expect(availableTables[0].status).toBe("disponible");
+    expect(availableTables[0].status).toBe('disponible');
   });
 
-  test("AC8: When listing tables of a restaurant, response includes only tables with that restaurantId", async ({
+  test('AC8: When listing tables of a restaurant, response includes only tables with that restaurantId', async ({
     request,
   }) => {
-    const rest008 = "rest-008";
-    const otherRest = "rest-other";
+    const restaurantA = await createRestaurant(request, '008-a');
+    const restaurantB = await createRestaurant(request, '008-b');
 
     // Create tables for different restaurants
     await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: rest008,
+        restaurantId: restaurantA.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
 
     await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: rest008,
+        restaurantId: restaurantA.id,
         number: 2,
         capacity: 2,
-        tableType: "exterior",
+        tableType: 'exterior',
       },
     });
 
     await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: otherRest,
+        restaurantId: restaurantB.id,
         number: 1,
         capacity: 6,
-        tableType: "privada",
+        tableType: 'privada',
       },
     });
 
     // Get tables for specific restaurant
     const response = await request.get(`${BASE_URL}/tables`, {
-      params: { restaurantId: rest008 },
+      params: { restaurantId: restaurantA.id },
     });
     const tables = await response.json();
 
-    // Should only have 2 tables for rest008
+    // Should only have 2 tables for restaurantA
     expect(tables).toHaveLength(2);
-    expect(tables.every((t) => t.restaurantId === rest008)).toBe(true);
+    expect(tables.every((t) => t.restaurantId === restaurantA.id)).toBe(true);
   });
 
-  test("AC9: When saving a new table, API validates all required fields", async ({
+  test('AC9: When saving a new table, API validates all required fields', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '009');
+
     // Missing restaurantId
     let response = await request.post(`${BASE_URL}/tables`, {
       data: {
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(response.status()).toBe(400);
@@ -307,9 +336,9 @@ test.describe("Table Management API - Acceptance Criteria", () => {
     // Missing number
     response = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-009",
+        restaurantId: restaurant.id,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(response.status()).toBe(400);
@@ -317,9 +346,9 @@ test.describe("Table Management API - Acceptance Criteria", () => {
     // Missing capacity
     response = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-009",
+        restaurantId: restaurant.id,
         number: 1,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(response.status()).toBe(400);
@@ -327,7 +356,7 @@ test.describe("Table Management API - Acceptance Criteria", () => {
     // Missing tableType
     response = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-009",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
       },
@@ -337,25 +366,38 @@ test.describe("Table Management API - Acceptance Criteria", () => {
     // All fields present - should succeed
     response = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-009",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(response.status()).toBe(201);
   });
 
-  test("Verify duplicate table creation is rejected", async ({ request }) => {
-    const rest010 = "rest-010";
-    
+  test('Rejects table creation with a non-existent restaurantId', async ({ request }) => {
+    const response = await request.post(`${BASE_URL}/tables`, {
+      data: {
+        restaurantId: '000000000000000000000000',
+        number: 1,
+        capacity: 4,
+        tableType: 'interior',
+      },
+    });
+    expect(response.status()).toBe(400);
+    expect(await response.json()).toHaveProperty('error');
+  });
+
+  test('Verify duplicate table creation is rejected', async ({ request }) => {
+    const restaurant = await createRestaurant(request, '010');
+
     // Create first table
     const response1 = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: rest010,
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(response1.status()).toBe(201);
@@ -363,24 +405,26 @@ test.describe("Table Management API - Acceptance Criteria", () => {
     // Try to create duplicate (same restaurantId and number)
     const response2 = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: rest010,
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     expect(response2.status()).toBe(409);
-    expect(await response2.json()).toHaveProperty("error");
+    expect(await response2.json()).toHaveProperty('error');
   });
 
-  test("Verify state transitions are enforced", async ({ request }) => {
+  test('Verify state transitions are enforced', async ({ request }) => {
+    const restaurant = await createRestaurant(request, '011');
+
     // Create a table
     const createResponse = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-011",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     const table = await createResponse.json();
@@ -388,22 +432,24 @@ test.describe("Table Management API - Acceptance Criteria", () => {
     // Cannot go directly from disponible to ocupada
     const invalidTransition = await request.put(
       `${BASE_URL}/tables/${table.id}/status`,
-      { data: { status: "ocupada" } }
+      { data: { status: 'ocupada' } }
     );
     expect(invalidTransition.status()).toBe(400);
-    expect(await invalidTransition.json()).toHaveProperty("error");
+    expect(await invalidTransition.json()).toHaveProperty('error');
   });
 
-  test("Verify reservation cancellation returns table to disponible", async ({
+  test('Verify reservation cancellation returns table to disponible', async ({
     request,
   }) => {
+    const restaurant = await createRestaurant(request, '012');
+
     // Create and reserve a table
     const createResponse = await request.post(`${BASE_URL}/tables`, {
       data: {
-        restaurantId: "rest-012",
+        restaurantId: restaurant.id,
         number: 1,
         capacity: 4,
-        tableType: "interior",
+        tableType: 'interior',
       },
     });
     const table = await createResponse.json();
@@ -420,11 +466,11 @@ test.describe("Table Management API - Acceptance Criteria", () => {
 
     // Verify status is back to disponible
     const getResponse = await request.get(`${BASE_URL}/tables`, {
-      params: { restaurantId: "rest-012" },
+      params: { restaurantId: restaurant.id },
     });
     const tables = await getResponse.json();
     const updatedTable = tables.find((t) => t.id === table.id);
-    expect(updatedTable.status).toBe("disponible");
+    expect(updatedTable.status).toBe('disponible');
     expect(updatedTable.reservationId).toBeUndefined();
   });
 });

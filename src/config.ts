@@ -25,10 +25,14 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error('PORT must be a valid positive number');
 }
 
-const mongodbUri = process.env.MONGODB_URI as string;
+const rawUri = process.env.MONGODB_URI as string;
 const apiUser = process.env.API_USER as string;
 const apiPassword = process.env.API_PASSWORD as string;
 const jwtSecret = process.env.JWT_SECRET as string;
+
+const mongodbUri = rawUri
+  .replace('<user>', apiUser)
+  .replace('<password>', apiPassword);
 
 export const config = {
   mongodbUri,

@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-08
+
+### Added
+- **Restaurant Management API**: CRUD endpoints to manage restaurants with name, address, opening and closing hours
+- **Restaurant validation**: required fields and consistent schedule validation (`openingHours` before `closingHours`)
+- **Table creation validation**: tables can only be created with an existing `restaurantId`
+- **New restaurant e2e tests** covering creation, listing, retrieval, update, and invalid inputs
+
+### Changed
+- Updated table acceptance tests to create tables using a valid restaurant record
+- Added restaurant route integration with table creation flow
+
+### Technical Details
+- Express.js API with MongoDB persistence via Mongoose
+- Restaurant and table domain modules separated by routes, controllers, services, models and types
+- Playwright end-to-end tests for API validation
+
 ## [1.1.0] - 2026-05-07
 
 ### Added
@@ -39,8 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Playwright e2e testing framework
 - Full type safety with TypeScript interfaces
 - RESTful API design following HTTP status codes (201 for creation, 400 for validation errors, 404 for not found, 409 for conflicts)
-
-## [1.0.0] - 2026-05-07
 
 ### Initial Release
 - Project scaffold with TypeScript and Express configuration
